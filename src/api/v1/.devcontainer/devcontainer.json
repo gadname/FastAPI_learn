@@ -1,0 +1,54 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "FAST API BACKEND",
+	"service": "practice_fastapi",
+	"dockerComposeFile": "./docker-compose.yml",
+	"workspaceFolder": "/workspace",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"charliermarsh.ruff",
+				"ms-python.python",
+				"ms-python.mypy-type-checker",
+				"ms-python.vscode-pylance",
+				"njpwerner.autodocstring"
+			],
+			"settings": {
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.fixAll": "always"
+				},
+				"ruff.path": [
+					"/usr/local/bin/ruff"
+				],
+				"ruff.interpreter": [
+					"/usr/local/bin/python"
+				],
+				"editor.defaultFormatter": "ms-python.vscode-pylance",
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.analysis.typeCheckingMode": "standard",
+				"python.analysis.autoImportCompletions": true,
+				"python.analysis.inlayHints.functionReturnTypes": true,
+				"python.analysis.inlayHints.pytestParameters": true,
+				"python.analysis.inlayHints.variableTypes": true,
+				"python.analysis.typeEvaluation.strictDictionaryInference": true,
+				"python.analysis.typeEvaluation.strictListInference": true,
+				"mypy-type-checker.args": [
+					"--disallow-untyped-defs"
+				],
+				"mypy-type-checker.importStrategy": "fromEnvironment"
+			}
+		}
+	}
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Uncomment the next line to run commands after the container is created.
+	// "postCreateCommand": "cat /etc/os-release",
+	// Configure tool-specific properties.
+	// "customizations": {},
+	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "devcontainer"
+}

@@ -1,0 +1,8 @@
+# .gitignore: プロジェクトルートに配置
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+build/
+dist/

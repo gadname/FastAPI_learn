@@ -1,0 +1,38 @@
+services:
+  practice_postgres_db:
+    image: postgres:16
+    container_name: practice_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - practice_postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  practice_fastapi:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: fastapi_practice
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/workspace:cached
+    depends_on:
+      - practice_postgres_db
+    networks:
+      - app_network
+    working_dir: /workspace
+    command: "uvicorn src.main:app --host 0.0.0.0 --reload"
+
+
+volumes:
+  practice_postgres_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
