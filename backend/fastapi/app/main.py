@@ -8,10 +8,8 @@ from src.api.v1 import v1_router
 app = FastAPI()
 
 allowed_origins: list[str] = [
-    "http://localhost:3000",  # ローカル開発用
-    "https://main.d1f5vuc8i3em5o.amplifyapp.com",
+    "http://localhost:3000",
 ]
-
 
 app.include_router(router=v1_router, prefix="/api/v1")
 
