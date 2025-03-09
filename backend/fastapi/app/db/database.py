@@ -12,11 +12,11 @@ ai_bot_cloud_sql_connection_name: str = settings.ai_bot_cloud_sql_connection_nam
 
 
 def _get_database_url() -> str:
-    base_url: str = f"postgresql+asyncpg://{ai_bot_db_user}:{ai_bot_db_password}@"
-    if settings.environment == "production":
-        return f"{base_url}/{ai_bot_db_name}?unix_socket=/cloudsql/{ai_bot_cloud_sql_connection_name}"
-    else:
-        return f"{base_url}{ai_bot_db_host}:5432/{ai_bot_db_name}"
+    from app.settings import Settings
+
+    settings = Settings()
+
+    return f"postgresql+asyncpg://{settings.ai_bot_db_user}:{settings.ai_bot_db_password}@{settings.ai_bot_db_host}:5432/{settings.ai_bot_db_name}"
 
 
 DATABASE_URL: str = _get_database_url()

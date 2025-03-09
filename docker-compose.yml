@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres_db:
+    image: postgres:16
+    container_name: practice_postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_bot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  fastapi:
+    build:
+      context: ./backend/fastapi
+      dockerfile: Dockerfile
+    container_name: fastapi_practice
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/fastapi:/app
+    depends_on:
+      - postgres_db
+    networks:
+      - app_network
+    environment:
+      - ai_bot_db_user=postgres
+      - ai_bot_db_password=postgres
+      - ai_bot_db_name=ai_bot_db
+      - ai_bot_db_host=postgres_db
+      - ai_bot_cloud_sql_connection_name=local
+      - environment=development
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge 
