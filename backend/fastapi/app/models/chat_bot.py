@@ -8,7 +8,7 @@ from app.utils.id_generator import generate_ulid
 class ChatBot(Base):
     __tablename__ = "chat_bots"
 
-    id: Mapped[int] = mapped_column(
+    id: Mapped[str] = mapped_column(
         VARCHAR(26),
         index=True,
         nullable=False,

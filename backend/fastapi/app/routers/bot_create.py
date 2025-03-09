@@ -16,7 +16,7 @@ router = APIRouter(prefix="/bot", tags=["bot"])
 @router.post("/", response_model=BotResponse)
 async def create_bot(bot: BotCreate, db: AsyncSession = Depends(get_db)) -> BotResponse:
     try:
-        return await ChatBotService.create_chat_bot(bot, db)
+        return await ChatBotService.create_chat_bot(db, bot)
     except Exception as e:
         logger.error(f"ボット作成エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

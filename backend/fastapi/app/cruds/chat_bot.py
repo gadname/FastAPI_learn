@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select
 from app.models.chat_bot import ChatBot
 from app.schemas.bot import BotCreate
 
@@ -18,3 +18,8 @@ class ChatBotCRUD:
         await session.flush()
         await session.refresh(new_bot)
         return new_bot
+
+    @staticmethod
+    async def get_all_bots(session: AsyncSession) -> list[ChatBot]:
+        bots = await session.execute(select(ChatBot))
+        return bots.scalars().all()
