@@ -3,7 +3,13 @@ from fastapi import HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.bot import BotCreate, BotResponse, BotAllResponse
+from app.schemas.bot import (
+    BotCreate,
+    BotResponse,
+    BotAllResponse,
+    UpdateBotResponse,
+    UpdateBotRequest,
+)
 
 from app.db.database import get_db
 from app.services.chat_bot import ChatBotService
@@ -28,4 +34,15 @@ async def get_all_bots(db: AsyncSession = Depends(get_db)) -> BotAllResponse:
         return await ChatBotService.get_all_bots(db)
     except Exception as e:
         logger.error(f"ボット取得エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{bot_id}", response_model=UpdateBotResponse)
+async def update_bot(
+    bot_id: str, request: UpdateBotRequest, db: AsyncSession = Depends(get_db)
+) -> UpdateBotResponse:
+    try:
+        return await ChatBotService.update_bot(bot_id, request, db)
+    except Exception as e:
+        logger.error(f"ボット更新エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
