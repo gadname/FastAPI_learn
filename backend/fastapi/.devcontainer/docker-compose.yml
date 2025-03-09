@@ -5,6 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_bot_db
     ports:
       - "5432:5432"
     volumes:
@@ -26,7 +27,7 @@ services:
     networks:
       - app_network
     working_dir: /workspace
-    command: "uvicorn src.main:app --host 0.0.0.0 --reload"
+    command: "uvicorn app.main:app --host 0.0.0.0 --reload"
 
 
 volumes:
