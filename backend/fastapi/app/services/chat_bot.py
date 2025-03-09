@@ -19,6 +19,6 @@ class ChatBotService:
     async def get_all_bots(session: AsyncSession) -> BotAllResponse:
         try:
             bots = await ChatBotCRUD.get_all_bots(session)
-            return bots
+            return BotAllResponse(bots=bots)
         except Exception as e:
             raise e

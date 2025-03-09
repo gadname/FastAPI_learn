@@ -3,7 +3,7 @@ from fastapi import HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.bot import BotCreate, BotResponse
+from app.schemas.bot import BotCreate, BotResponse, BotAllResponse
 
 from app.db.database import get_db
 from app.services.chat_bot import ChatBotService
@@ -19,4 +19,13 @@ async def create_bot(bot: BotCreate, db: AsyncSession = Depends(get_db)) -> BotR
         return await ChatBotService.create_chat_bot(db, bot)
     except Exception as e:
         logger.error(f"ボット作成エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/", response_model=BotAllResponse)
+async def get_all_bots(db: AsyncSession = Depends(get_db)) -> BotAllResponse:
+    try:
+        return await ChatBotService.get_all_bots(db)
+    except Exception as e:
+        logger.error(f"ボット取得エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

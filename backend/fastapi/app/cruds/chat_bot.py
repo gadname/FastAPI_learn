@@ -16,7 +16,7 @@ class ChatBotCRUD:
         )
         session.add(new_bot)
         await session.flush()
-        await session.refresh(new_bot)
+        await session.commit()
         return new_bot
 
     @staticmethod
