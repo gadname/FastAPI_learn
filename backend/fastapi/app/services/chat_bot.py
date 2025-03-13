@@ -5,6 +5,7 @@ from app.schemas.bot import (
     BotAllResponse,
     UpdateBotResponse,
     UpdateBotRequest,
+    DeleteBotResponse,
 )
 from app.cruds.chat_bot import ChatBotCRUD
 
@@ -42,5 +43,16 @@ class ChatBotService:
                     color=request.color,
                 )
                 return update_bot
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    async def delete_bot(bot_id: str, session: AsyncSession) -> DeleteBotResponse:
+        try:
+            async with session.begin():
+                delete_bot = await ChatBotCRUD.delete_bot(
+                    bot_id=bot_id, session=session
+                )
+                return delete_bot
         except Exception as e:
             raise e

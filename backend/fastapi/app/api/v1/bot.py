@@ -9,6 +9,7 @@ from app.schemas.bot import (
     BotAllResponse,
     UpdateBotResponse,
     UpdateBotRequest,
+    DeleteBotResponse,
 )
 
 from app.db.database import get_db
@@ -45,4 +46,15 @@ async def update_bot(
         return await ChatBotService.update_bot(bot_id, request, db)
     except Exception as e:
         logger.error(f"ボット更新エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{bot_id}", response_model=DeleteBotResponse)
+async def delete_bot(
+    bot_id: str, db: AsyncSession = Depends(get_db)
+) -> DeleteBotResponse:
+    try:
+        return await ChatBotService.delete_bot(bot_id, db)
+    except Exception as e:
+        logger.error(f"ボット削除エラー")
         raise HTTPException(status_code=500, detail=str(e))

@@ -36,3 +36,7 @@ class UpdateBotResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DeleteBotResponse(BaseModel):
+    id: str

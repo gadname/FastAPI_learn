@@ -37,3 +37,10 @@ class ChatBotCRUD:
         result = await session.execute(select(ChatBot).where(ChatBot.id == bot_id))
         bot = result.scalars().one_or_none()
         return bot
+
+    @staticmethod
+    async def delete_bot(bot_id: str, session: AsyncSession) -> ChatBot:
+        result = await session.execute(select(ChatBot).where(ChatBot.id == bot_id))
+        bot = result.scalars().one_or_none()
+        await session.delete(bot)
+        return bot

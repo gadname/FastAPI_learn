@@ -7,13 +7,18 @@ from app.api.v1 import v1_router
 
 app = FastAPI()
 
+
 # アプリケーション起動時にテーブルを作成
-
-
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+# ルートパスのエンドポイントを追加
+@app.get("/")
+async def root():
+    return {"message": "Welcome to FastAPI Application"}
 
 
 allowed_origins: list[str] = [
