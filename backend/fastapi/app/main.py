@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from app.db.database import Base, engine
+# Update imports from app.db.database
+from app.db.database import Base, async_engine, engine_sync # Import both engines
+
 from app.api.v1 import v1_router
 
 app = FastAPI()
@@ -11,8 +13,17 @@ app = FastAPI()
 # アプリケーション起動時にテーブルを作成
 @app.on_event("startup")
 async def startup():
-    async with engine.begin() as conn:
+    # For async engine
+    async with async_engine.begin() as conn:
+        # This creates all tables defined on Base metadata for the async connection.
         await conn.run_sync(Base.metadata.create_all)
+
+    # For sync engine (explicitly create tables for sync operations)
+    # This ensures tables are recognized by the sync components.
+    # Base.metadata.create_all is a synchronous call.
+    with engine_sync.connect() as conn: # Use a connection from the sync engine
+        Base.metadata.create_all(bind=engine_sync) # Pass engine_sync to create_all
+        conn.commit() # Commit the table creation DDL, important for some DBs
 
 
 # ルートパスのエンドポイントを追加
