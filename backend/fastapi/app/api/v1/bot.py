@@ -38,12 +38,27 @@ async def get_all_bots(db: AsyncSession = Depends(get_db)) -> BotAllResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/{bot_id}", response_model=BotResponse)
+async def get_bot(bot_id: str, db: AsyncSession = Depends(get_db)) -> BotResponse:
+    try:
+        return await ChatBotService.get_bot_by_id(db, bot_id)
+    except ValueError as e:
+        logger.error(f"ボットが見つかりません: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"ボット取得エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.put("/{bot_id}", response_model=UpdateBotResponse)
 async def update_bot(
     bot_id: str, request: UpdateBotRequest, db: AsyncSession = Depends(get_db)
 ) -> UpdateBotResponse:
     try:
         return await ChatBotService.update_bot(bot_id, request, db)
+    except ValueError as e:
+        logger.error(f"ボットが見つかりません: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"ボット更新エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -55,6 +70,9 @@ async def delete_bot(
 ) -> DeleteBotResponse:
     try:
         return await ChatBotService.delete_bot(bot_id, db)
+    except ValueError as e:
+        logger.error(f"ボットが見つかりません: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"ボット削除エラー")
+        logger.error(f"ボット削除エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

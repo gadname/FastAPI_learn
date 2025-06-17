@@ -1,13 +1,22 @@
 from sqlalchemy import Column, String, Integer, Float, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from app.db.database import Base
-import uuid
+from app.utils.id_generator import generate_ulid
+from sqlalchemy import VARCHAR
 
 
 class Cat(Base):
     __tablename__ = "cats"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        VARCHAR(26),
+        index=True,
+        nullable=False,
+        unique=True,
+        default=generate_ulid,
+        primary_key=True,
+    )
     name = Column(String, nullable=False)
     breed = Column(String, nullable=True)
     age = Column(Integer, nullable=True)

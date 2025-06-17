@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.settings import settings
 from urllib.parse import quote_plus
+from app.utils.logging import logger
 
 ai_bot_db_user: str = settings.ai_bot_db_user
 ai_bot_db_password: str = quote_plus(settings.ai_bot_db_password)
@@ -20,9 +21,9 @@ def _get_database_url() -> str:
 
 
 DATABASE_URL: str = _get_database_url()
-print(f"Connecting to database: {DATABASE_URL}")
+logger.info(f"Connecting to database: {DATABASE_URL}")
 
-engine: Any = create_async_engine(DATABASE_URL, echo=True)
+engine: Any = create_async_engine(DATABASE_URL, echo=settings.environment == "development")
 # 非同期セッションオブジェクトを作成
 AsyncSessionLocal: Any = sessionmaker(
     bind=engine,
@@ -38,6 +39,3 @@ Base: Any = declarative_base()
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
-
-
-# リソースを安全に確保するため
