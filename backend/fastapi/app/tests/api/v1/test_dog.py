@@ -51,6 +51,8 @@ def test_get_dog_by_id_found():
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Charlie"
+    assert data["breed"] == "Poodle"
+    assert data["age"] == 2
     assert data["id"] == dog_id
 
 def test_get_dog_by_id_not_found():
