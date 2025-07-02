@@ -36,6 +36,22 @@ services:
       - ai_bot_cloud_sql_connection_name=local
       - environment=development
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nextjs_frontend
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - fastapi
+    environment:
+      - NEXT_PUBLIC_API_URL=http://fastapi:8000
+    networks:
+      - app_network
+
 volumes:
   postgres_data:
     driver: local

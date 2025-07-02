@@ -1,0 +1,9 @@
+# Node
+node_modules/
+.next/
+
+# Python virtualenv
+.venv/
+
+# Docker
+**/__pycache__/
