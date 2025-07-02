@@ -29,7 +29,7 @@ class ChatBotCRUD:
         await session.execute(
             update(ChatBot).where(ChatBot.id == bot_id).values(**kwargs)
         )
-        await session.flush()
+        await session.commit()
         return await ChatBotCRUD.get_bot_by_id(bot_id, session)
 
     @staticmethod
@@ -42,5 +42,7 @@ class ChatBotCRUD:
     async def delete_bot(bot_id: str, session: AsyncSession) -> ChatBot:
         result = await session.execute(select(ChatBot).where(ChatBot.id == bot_id))
         bot = result.scalars().one_or_none()
-        await session.delete(bot)
+        if bot:
+            await session.delete(bot)
+            await session.commit()
         return bot

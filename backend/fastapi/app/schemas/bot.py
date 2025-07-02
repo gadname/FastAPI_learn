@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class BotBase(BaseModel):
@@ -11,8 +12,9 @@ class BotCreate(BotBase):
     pass
 
 
-class UpdateBotRequest(BotBase):
-    pass
+class UpdateBotRequest(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
 
 
 class BotResponse(BotBase):
