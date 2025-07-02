@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カンバンボード</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>カンバンボード</h1>
+        <div class="controls">
+            <button id="addBotBtn" class="btn btn-primary">ボット追加</button>
+            <button id="addCatBtn" class="btn btn-secondary">猫追加</button>
+            <button id="refreshBtn" class="btn btn-refresh">更新</button>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <div class="column" data-status="todo">
+            <div class="column-header">
+                <h2>To Do</h2>
+                <span class="item-count">0</span>
+            </div>
+            <div class="column-content" id="todo-column">
+                <!-- Cards will be dynamically added here -->
+            </div>
+        </div>
+
+        <div class="column" data-status="progress">
+            <div class="column-header">
+                <h2>In Progress</h2>
+                <span class="item-count">0</span>
+            </div>
+            <div class="column-content" id="progress-column">
+                <!-- Cards will be dynamically added here -->
+            </div>
+        </div>
+
+        <div class="column" data-status="done">
+            <div class="column-header">
+                <h2>Done</h2>
+                <span class="item-count">0</span>
+            </div>
+            <div class="column-content" id="done-column">
+                <!-- Cards will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding new items -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">新しいアイテムを追加</h2>
+            <form id="addItemForm">
+                <div class="form-group">
+                    <label for="itemName">名前:</label>
+                    <input type="text" id="itemName" name="name" required>
+                </div>
+                <div class="form-group" id="botColorGroup" style="display: none;">
+                    <label for="itemColor">色:</label>
+                    <input type="text" id="itemColor" name="color" value="C5E24A">
+                </div>
+                <div class="form-group" id="catDetailsGroup" style="display: none;">
+                    <label for="itemBreed">品種:</label>
+                    <input type="text" id="itemBreed" name="breed">
+                    <label for="itemAge">年齢:</label>
+                    <input type="number" id="itemAge" name="age" min="0">
+                    <label for="itemWeight">体重:</label>
+                    <input type="number" id="itemWeight" name="weight" step="0.1" min="0">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">追加</button>
+                    <button type="button" class="btn btn-cancel" id="cancelBtn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
