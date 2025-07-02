@@ -48,7 +48,7 @@ services:
     depends_on:
       - fastapi
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://fastapi:8000
     networks:
       - app_network
 
