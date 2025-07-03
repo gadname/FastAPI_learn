@@ -6,3 +6,6 @@
 build/
 dist/
 .specstory/
+*.db
+*.sqlite
+*.sqlite3
