@@ -18,7 +18,7 @@ class CatResponse(BaseModel):
     weight: Optional[float]
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 
@@ -42,7 +42,7 @@ class UpdateCatResponse(BaseModel):
     weight: Optional[float]
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 
