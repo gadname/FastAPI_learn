@@ -78,6 +78,36 @@
         </div>
     </div>
 
+    <!-- Modal for editing items -->
+    <div id="editItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="editModalTitle">アイテムを編集</h2>
+            <form id="editItemForm">
+                <div class="form-group">
+                    <label for="editItemName">名前:</label>
+                    <input type="text" id="editItemName" name="name" required>
+                </div>
+                <div class="form-group" id="editBotColorGroup" style="display: none;">
+                    <label for="editItemColor">色:</label>
+                    <input type="text" id="editItemColor" name="color">
+                </div>
+                <div class="form-group" id="editCatDetailsGroup" style="display: none;">
+                    <label for="editItemBreed">品種:</label>
+                    <input type="text" id="editItemBreed" name="breed">
+                    <label for="editItemAge">年齢:</label>
+                    <input type="number" id="editItemAge" name="age" min="0">
+                    <label for="editItemWeight">体重:</label>
+                    <input type="number" id="editItemWeight" name="weight" step="0.1" min="0">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">更新</button>
+                    <button type="button" class="btn btn-cancel" id="editCancelBtn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="/static/script.js"></script>
 </body>
 </html>
