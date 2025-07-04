@@ -14,65 +14,49 @@ from app.schemas.cat import (
 
 from app.db.database import get_db
 from app.services.cat import CatService
-from app.utils.logging import logger
+from app.utils.logging import logger # Ensure logger is imported
+from app.api.v1.base_router import generic_router_factory
+from typing import List # Required for List type hint if not already present
 
+# Adapter class to bridge CatService and generic_router_factory
+class CatServiceAdapter:
+    # Using CatService directly as it contains static methods
+    # No need to instantiate CatService itself if all methods are static.
+    # db_service = CatService (this line is not needed if directly calling static methods)
 
-router = APIRouter(prefix="/cat", tags=["cat"])
+    async def create(self, db: AsyncSession, obj_in: CatCreate) -> CatResponse:
+        return await CatService.create_cat(db=db, cat_data=obj_in)
 
+    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> CatAllResponse:
+        # CatService.get_all_cats doesn't support pagination (skip, limit).
+        # It directly returns CatAllResponse as required.
+        return await CatService.get_all_cats(db=db)
 
-@router.post("/", response_model=CatResponse)
-async def create_cat(cat: CatCreate, db: AsyncSession = Depends(get_db)) -> CatResponse:
-    try:
-        return await CatService.create_cat(db, cat)
-    except Exception as e:
-        logger.error(f"猫作成エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    async def get(self, db: AsyncSession, id: str) -> CatResponse:
+        return await CatService.get_cat_by_id(db=db, cat_id=id)
 
+    async def update(self, db: AsyncSession, db_obj: CatResponse, obj_in: UpdateCatRequest) -> UpdateCatResponse:
+        # generic_router_factory first fetches the object (db_obj), then passes it to update.
+        # CatService.update_cat needs cat_id and the request schema.
+        if not hasattr(db_obj, 'id'):
+            raise ValueError("db_obj must have an id attribute for update")
+        return await CatService.update_cat(cat_id=db_obj.id, update_data=obj_in, db=db)
 
-@router.get("/", response_model=CatAllResponse)
-async def get_all_cats(db: AsyncSession = Depends(get_db)) -> CatAllResponse:
-    try:
-        return await CatService.get_all_cats(db)
-    except Exception as e:
-        logger.error(f"猫取得エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    async def remove(self, db: AsyncSession, id: str) -> DeleteCatResponse:
+        return await CatService.delete_cat(cat_id=id, db=db)
 
+# Instantiate the adapter
+adapted_cat_service = CatServiceAdapter()
 
-@router.get("/{cat_id}", response_model=CatResponse)
-async def get_cat(cat_id: str, db: AsyncSession = Depends(get_db)) -> CatResponse:
-    try:
-        return await CatService.get_cat_by_id(db, cat_id)
-    except ValueError as e:
-        logger.error(f"猫が見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"猫取得エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/{cat_id}", response_model=UpdateCatResponse)
-async def update_cat(
-    cat_id: str, request: UpdateCatRequest, db: AsyncSession = Depends(get_db)
-) -> UpdateCatResponse:
-    try:
-        return await CatService.update_cat(cat_id, request, db)
-    except ValueError as e:
-        logger.error(f"猫が見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"猫更新エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{cat_id}", response_model=DeleteCatResponse)
-async def delete_cat(
-    cat_id: str, db: AsyncSession = Depends(get_db)
-) -> DeleteCatResponse:
-    try:
-        return await CatService.delete_cat(cat_id, db)
-    except ValueError as e:
-        logger.error(f"猫が見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"猫削除エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Create the router using the generic factory and the adapter
+router = generic_router_factory(
+    service=adapted_cat_service,
+    tags=["cat"],
+    prefix="/cat",
+    response_model=CatResponse,
+    create_schema=CatCreate,
+    update_schema=UpdateCatRequest,
+    get_all_response_model=CatAllResponse, # Using CatAllResponse directly
+    update_response_model=UpdateCatResponse,
+    delete_response_model=DeleteCatResponse,
+)
