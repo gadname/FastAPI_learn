@@ -6,6 +6,7 @@ from mangum import Mangum
 
 from app.db.database import Base, engine
 from app.api.v1 import v1_router
+from app.models.user import User  # noqa: F401. Import for table creation
 
 app = FastAPI()
 
