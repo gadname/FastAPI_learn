@@ -1,8 +1,9 @@
 from typing import Any, AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from app.settings import settings
 from urllib.parse import quote_plus
+from app.db.base_class import Base
 from app.utils.logging import logger
 
 ai_bot_db_user: str = settings.ai_bot_db_user
@@ -37,8 +38,6 @@ AsyncSessionLocal: Any = sessionmaker(
     autoflush=False,
     expire_on_commit=False,
 )
-
-Base: Any = declarative_base()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
