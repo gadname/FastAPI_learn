@@ -24,20 +24,35 @@ class KanbanBoard {
         document.getElementById('addCatBtn').addEventListener('click', () => this.showAddModal('cat'));
         document.getElementById('refreshBtn').addEventListener('click', () => this.loadData());
 
-        // Modal events
-        const modal = document.getElementById('addItemModal');
-        const closeBtn = document.querySelector('.close');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const form = document.getElementById('addItemForm');
+        // Modal events for add modal
+        const addModal = document.getElementById('addItemModal');
+        const addCloseBtn = addModal.querySelector('.close');
+        const addCancelBtn = document.getElementById('cancelBtn');
+        const addForm = document.getElementById('addItemForm');
 
-        closeBtn.addEventListener('click', () => this.hideModal());
-        cancelBtn.addEventListener('click', () => this.hideModal());
+        addCloseBtn.addEventListener('click', () => this.hideModal());
+        addCancelBtn.addEventListener('click', () => this.hideModal());
         
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) this.hideModal();
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) this.hideModal();
         });
 
-        form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        addForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+        // Modal events for edit modal
+        const editModal = document.getElementById('editItemModal');
+        const editCloseBtn = editModal.querySelector('.close');
+        const editCancelBtn = document.getElementById('editCancelBtn');
+        const editForm = document.getElementById('editItemForm');
+
+        editCloseBtn.addEventListener('click', () => this.hideEditModal());
+        editCancelBtn.addEventListener('click', () => this.hideEditModal());
+        
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) this.hideEditModal();
+        });
+
+        editForm.addEventListener('submit', (e) => this.handleEditFormSubmit(e));
 
         // Setup drag and drop
         this.setupDragAndDrop();
@@ -343,8 +358,108 @@ class KanbanBoard {
     }
 
     editItem(itemId, itemType) {
-        // For now, just show an alert. Could implement edit modal later
-        alert('編集機能は今後実装予定です');
+        // Find the item to edit
+        const item = this.findItemById(itemId, itemType);
+        if (!item) {
+            this.showMessage('アイテムが見つかりません', 'error');
+            return;
+        }
+        
+        this.showEditModal(item, itemType);
+    }
+
+    findItemById(itemId, itemType) {
+        // Look through all columns to find the item
+        for (const column of Object.values(this.columnStates)) {
+            const item = column.find(item => item.id === itemId && item.type === itemType);
+            if (item) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    showEditModal(item, itemType) {
+        const modal = document.getElementById('editItemModal');
+        const modalTitle = document.getElementById('editModalTitle');
+        const editBotColorGroup = document.getElementById('editBotColorGroup');
+        const editCatDetailsGroup = document.getElementById('editCatDetailsGroup');
+        const form = document.getElementById('editItemForm');
+
+        // Reset form
+        form.reset();
+        form.dataset.itemId = item.id;
+        form.dataset.itemType = itemType;
+
+        // Set modal title and show appropriate fields
+        if (itemType === 'bot') {
+            modalTitle.textContent = 'ボットを編集';
+            editBotColorGroup.style.display = 'block';
+            editCatDetailsGroup.style.display = 'none';
+            
+            // Fill form with current values
+            document.getElementById('editItemName').value = item.name || '';
+            document.getElementById('editItemColor').value = item.color || '';
+        } else {
+            modalTitle.textContent = '猫を編集';
+            editBotColorGroup.style.display = 'none';
+            editCatDetailsGroup.style.display = 'block';
+            
+            // Fill form with current values
+            document.getElementById('editItemName').value = item.name || '';
+            document.getElementById('editItemBreed').value = item.breed || '';
+            document.getElementById('editItemAge').value = item.age || '';
+            document.getElementById('editItemWeight').value = item.weight || '';
+        }
+
+        modal.style.display = 'block';
+    }
+
+    hideEditModal() {
+        const modal = document.getElementById('editItemModal');
+        modal.style.display = 'none';
+    }
+
+    async handleEditFormSubmit(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const itemId = form.dataset.itemId;
+        const itemType = form.dataset.itemType;
+
+        let data = {
+            name: formData.get('name')
+        };
+
+        if (itemType === 'bot') {
+            data.color = formData.get('color');
+        } else {
+            data.breed = formData.get('breed');
+            data.age = formData.get('age') ? parseInt(formData.get('age')) : null;
+            data.weight = formData.get('weight') ? parseFloat(formData.get('weight')) : null;
+        }
+
+        try {
+            const response = await fetch(`/api/v1/${itemType}/${itemId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                this.hideEditModal();
+                this.showMessage(`${itemType === 'bot' ? 'ボット' : '猫'}を更新しました`, 'success');
+                this.loadData();
+            } else {
+                throw new Error('Failed to update item');
+            }
+        } catch (error) {
+            console.error('Error updating item:', error);
+            this.showMessage('アイテムの更新に失敗しました', 'error');
+        }
     }
 
     showLoading() {
