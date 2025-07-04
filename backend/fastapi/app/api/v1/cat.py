@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from fastapi import HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.schemas.user import User as UserSchema
+from app.utils.auth import get_current_active_user
 
 from app.schemas.cat import (
     CatCreate,
@@ -30,7 +32,8 @@ async def create_cat(cat: CatCreate, db: AsyncSession = Depends(get_db)) -> CatR
 
 
 @router.get("/", response_model=CatAllResponse)
-async def get_all_cats(db: AsyncSession = Depends(get_db)) -> CatAllResponse:
+async def get_all_cats(db: AsyncSession = Depends(get_db), current_user: UserSchema = Depends(get_current_active_user)) -> CatAllResponse:
+    # Example of using the user: logger.info(f"User {current_user.username} is accessing all cats.")
     try:
         return await CatService.get_all_cats(db)
     except Exception as e:
