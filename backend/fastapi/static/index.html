@@ -13,6 +13,7 @@
             <button id="addBotBtn" class="btn btn-primary">ボット追加</button>
             <button id="addCatBtn" class="btn btn-secondary">猫追加</button>
             <button id="refreshBtn" class="btn btn-refresh">更新</button>
+            <button id="helpBtn" class="btn btn-help">ヘルプ</button>
         </div>
     </div>
 
@@ -75,6 +76,38 @@
                     <button type="button" class="btn btn-cancel" id="cancelBtn">キャンセル</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="helpModalClose">&times;</span>
+            <h2>カンバンボードの使い方</h2>
+            <div class="help-content">
+                <h3>🤖 ボットの管理</h3>
+                <ul>
+                    <li>「ボット追加」でチャットボットを作成</li>
+                    <li>名前と色を設定してボットを追加</li>
+                    <li>ボットカードをドラッグ&ドロップで状態を変更</li>
+                </ul>
+                
+                <h3>🐱 猫の管理</h3>
+                <ul>
+                    <li>「猫追加」で猫の情報を登録</li>
+                    <li>名前、品種、年齢、体重を設定</li>
+                    <li>猫カードをドラッグ&ドロップで状態を変更</li>
+                </ul>
+                
+                <h3>📋 ボードの操作</h3>
+                <ul>
+                    <li><strong>To Do:</strong> 新しいタスクや予定</li>
+                    <li><strong>In Progress:</strong> 現在進行中のタスク</li>
+                    <li><strong>Done:</strong> 完了したタスク</li>
+                </ul>
+                
+                <p><strong>ヒント:</strong> カードをドラッグして列間を移動できます！</p>
+            </div>
         </div>
     </div>
 

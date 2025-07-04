@@ -23,6 +23,7 @@ class KanbanBoard {
         document.getElementById('addBotBtn').addEventListener('click', () => this.showAddModal('bot'));
         document.getElementById('addCatBtn').addEventListener('click', () => this.showAddModal('cat'));
         document.getElementById('refreshBtn').addEventListener('click', () => this.loadData());
+        document.getElementById('helpBtn').addEventListener('click', () => this.showHelpModal());
 
         // Modal events
         const modal = document.getElementById('addItemModal');
@@ -38,6 +39,15 @@ class KanbanBoard {
         });
 
         form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+        // Help modal events
+        const helpModal = document.getElementById('helpModal');
+        const helpModalClose = document.getElementById('helpModalClose');
+        
+        helpModalClose.addEventListener('click', () => this.hideHelpModal());
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) this.hideHelpModal();
+        });
 
         // Setup drag and drop
         this.setupDragAndDrop();
@@ -379,6 +389,16 @@ class KanbanBoard {
                 }
             }, 300);
         }, 3000);
+    }
+
+    showHelpModal() {
+        const modal = document.getElementById('helpModal');
+        modal.style.display = 'block';
+    }
+
+    hideHelpModal() {
+        const modal = document.getElementById('helpModal');
+        modal.style.display = 'none';
     }
 }
 

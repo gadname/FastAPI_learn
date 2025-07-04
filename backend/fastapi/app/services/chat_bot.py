@@ -32,7 +32,7 @@ class ChatBotService:
         except Exception as e:
             logger.error(f"ボット取得中にエラーが発生しました: {str(e)}")
             raise e
-            
+
     @staticmethod
     async def get_bot_by_id(session: AsyncSession, bot_id: str) -> BotResponse:
         try:
@@ -53,22 +53,20 @@ class ChatBotService:
             bot = await ChatBotCRUD.get_bot_by_id(bot_id, session)
             if not bot:
                 raise ValueError(f"ID {bot_id} のボットが見つかりません")
-                
+
             # Only update fields that are provided
             update_data = {}
             if request.name is not None:
                 update_data["name"] = request.name
             if request.color is not None:
                 update_data["color"] = request.color
-                
+
             if not update_data:
                 # No updates requested, return current bot
                 return UpdateBotResponse.model_validate(bot)
-                
+
             update_bot = await ChatBotCRUD.update_bot(
-                bot_id=bot_id,
-                session=session,
-                **update_data
+                bot_id=bot_id, session=session, **update_data
             )
             return update_bot
         except ValueError as e:
@@ -84,10 +82,8 @@ class ChatBotService:
             bot = await ChatBotCRUD.get_bot_by_id(bot_id, session)
             if not bot:
                 raise ValueError(f"ID {bot_id} のボットが見つかりません")
-                
-            delete_bot = await ChatBotCRUD.delete_bot(
-                bot_id=bot_id, session=session
-            )
+
+            await ChatBotCRUD.delete_bot(bot_id=bot_id, session=session)
             return DeleteBotResponse(id=bot_id)
         except ValueError as e:
             raise e

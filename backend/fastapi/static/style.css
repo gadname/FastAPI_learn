@@ -85,6 +85,16 @@ body {
     background-color: #d32f2f;
 }
 
+.btn-help {
+    background-color: #9C27B0;
+    color: white;
+}
+
+.btn-help:hover {
+    background-color: #7B1FA2;
+    transform: translateY(-1px);
+}
+
 /* Kanban Board */
 .kanban-board {
     display: flex;
@@ -353,4 +363,31 @@ body {
 
 .message.error {
     background-color: #f44336;
+}
+
+/* Help Modal Styles */
+.help-content {
+    padding: 1rem 0;
+}
+
+.help-content h3 {
+    color: #333;
+    margin: 1rem 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.help-content ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.help-content li {
+    margin: 0.3rem 0;
+    line-height: 1.4;
+}
+
+.help-content p {
+    margin: 1rem 0;
+    font-style: italic;
+    color: #666;
 }

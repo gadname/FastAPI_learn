@@ -13,22 +13,23 @@ ai_bot_cloud_sql_connection_name: str = settings.ai_bot_cloud_sql_connection_nam
 
 
 def _get_database_url() -> str:
-    from app.settings import Settings
-    import os
-
-    settings = Settings()
-    
     # Use SQLite for development/testing if PostgreSQL is not available
     if settings.environment == "development" and settings.ai_bot_db_host == "localhost":
         return "sqlite+aiosqlite:///./test.db"
-    
-    return f"postgresql+asyncpg://{settings.ai_bot_db_user}:{settings.ai_bot_db_password}@{settings.ai_bot_db_host}:5432/{settings.ai_bot_db_name}"
+
+    return (
+        f"postgresql+asyncpg://{settings.ai_bot_db_user}:"
+        f"{settings.ai_bot_db_password}@{settings.ai_bot_db_host}:"
+        f"5432/{settings.ai_bot_db_name}"
+    )
 
 
 DATABASE_URL: str = _get_database_url()
 logger.info(f"Connecting to database: {DATABASE_URL}")
 
-engine: Any = create_async_engine(DATABASE_URL, echo=settings.environment == "development")
+engine: Any = create_async_engine(
+    DATABASE_URL, echo=settings.environment == "development"
+)
 # 非同期セッションオブジェクトを作成
 AsyncSessionLocal: Any = sessionmaker(
     bind=engine,
