@@ -1,4 +1,4 @@
-name: Add Label
+name: Claude Label Updater
 
 on:
   issue_comment:
@@ -8,36 +8,49 @@ permissions:
   issues: write
 
 jobs:
-  add-label:
-    if: contains(github.event.comment.body, 'LABEL_UPDATE:')
+  update-label:
+    # claude[bot]のコメントのみ処理
+    if: |
+      github.event.comment.user.login == 'claude[bot]' &&
+      contains(github.event.comment.body, 'LABEL_UPDATE:')
     runs-on: ubuntu-latest
     steps:
-      - name: Add Label
+      - name: Update Label
         uses: actions/github-script@v7
         with:
           script: |
             const comment = context.payload.comment.body;
             
             // LABEL_UPDATE:の後の文字列を取得
-            const index = comment.indexOf('LABEL_UPDATE:');
-            if (index === -1) {
-              console.log('LABEL_UPDATE: not found');
+            const match = comment.match(/LABEL_UPDATE:([^\s\n]+)/);
+            if (!match) {
+              console.log('No valid LABEL_UPDATE found');
               return;
             }
             
-            // LABEL_UPDATE:の後の部分を取得して、最初の単語を抽出
-            const afterLabel = comment.substring(index + 13).trim();
-            const newLabel = afterLabel.split(/[\s\n]/)[0];
-            
-            if (!newLabel) {
-              console.log('No label specified');
-              return;
-            }
-            
+            const newLabel = match[1];
             const issue = context.issue.number;
-            console.log(`Adding label "${newLabel}" to issue #${issue}`);
             
-            // ラベルを追加（既存のラベルはそのまま）
+            console.log(`Updating issue #${issue} with label: ${newLabel}`);
+            
+            // workflow:で始まる既存のラベルを削除
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              ...context.repo,
+              issue_number: issue
+            });
+            
+            for (const label of currentLabels) {
+              if (label.name.startsWith('workflow:')) {
+                console.log(`Removing: ${label.name}`);
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: issue,
+                  name: label.name
+                });
+              }
+            }
+            
+            // 新しいラベルを追加
             await github.rest.issues.addLabels({
               ...context.repo,
               issue_number: issue,
@@ -48,5 +61,5 @@ jobs:
             await github.rest.issues.createComment({
               ...context.repo,
               issue_number: issue,
-              body: `✅ ラベル \`${newLabel}\` を追加しました。`
+              body: `✅ ラベルを \`${newLabel}\` に更新しました。`
             });
