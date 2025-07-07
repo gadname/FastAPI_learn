@@ -13,27 +13,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Update Label
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # コメントから新しいラベルを抽出
-          COMMENT="${{ github.event.comment.body }}"
-          NEW_LABEL=$(echo "$COMMENT" | grep -oP 'LABEL_UPDATE:\K\S+' || exit 0)
-          
-          if [ -z "$NEW_LABEL" ]; then
-            echo "No label found"
-            exit 0
-          fi
-          
-          ISSUE=${{ github.event.issue.number }}
-          
-          # 古いworkflow:ラベルを削除して新しいラベルを追加
-          gh issue edit $ISSUE -R ${{ github.repository }} \
-            --remove-label "workflow:ready-for-analysis" \
-            --remove-label "workflow:ready-for-impl" \
-            --remove-label "workflow:ready-for-review" \
-            --add-label "$NEW_LABEL"
-          
-          # 確認コメント
-          gh issue comment $ISSUE -R ${{ github.repository }} \
-            --body "✅ ラベルを \`$NEW_LABEL\` に更新しました。"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const match = comment.match(/LABEL_UPDATE:(\S+)/);
+            
+            if (!match) {
+              console.log('No label found');
+              return;
+            }
+            
+            const newLabel = match[1];
+            const issue = context.issue.number;
+            
+            console.log(`Updating issue #${issue} with label: ${newLabel}`);
+            
+            // Remove old labels
+            try {
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: issue,
+                name: 'workflow:ready-for-analysis'
+              });
+            } catch (e) {}
+            
+            try {
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: issue,
+                name: 'workflow:ready-for-impl'
+              });
+            } catch (e) {}
+            
+            try {
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: issue,
+                name: 'workflow:ready-for-review'
+              });
+            } catch (e) {}
+            
+            // Add new label
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: issue,
+              labels: [newLabel]
+            });
+            
+            // Post comment
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: issue,
+              body: `✅ ラベルを \`${newLabel}\` に更新しました。`
+            });
