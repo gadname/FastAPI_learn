@@ -1,6 +1,4 @@
-# .github/workflows/claude-label-updater.yml
-# これを新規ファイルとして追加するか、既存のワークフローに追加
-
+cat > .github/workflows/claude-label-updater.yml << 'EOF'
 name: Claude Label Updater
 
 on:
@@ -9,28 +7,20 @@ on:
 
 permissions:
   issues: write
-  contents: read
 
 jobs:
   update-label-from-comment:
-    # claude[bot]のコメントでLABEL_UPDATE:が含まれているものを処理
     if: |
       github.event.issue.pull_request == null &&
       contains(github.event.comment.body, 'LABEL_UPDATE:')
     runs-on: ubuntu-latest
     steps:
-      - name: Check comment author and update label
+      - name: Update label
         uses: actions/github-script@v7
         with:
           script: |
             const comment = context.payload.comment;
-            const commenter = comment.user.login;
-            
-            // claude[bot]またはGitHub Actionsからのコメントのみ処理
-            if (commenter !== 'claude[bot]' && commenter !== 'github-actions[bot]') {
-              console.log(`Skipping comment from ${commenter}`);
-              return;
-            }
+            console.log(`Processing comment from: ${comment.user.login}`);
             
             // LABEL_UPDATE:を探す
             const match = comment.body.match(/LABEL_UPDATE:([^\s]+)/);
@@ -40,7 +30,7 @@ jobs:
             }
             
             const newLabel = match[1];
-            console.log(`Found label update request: ${newLabel}`);
+            console.log(`Updating label to: ${newLabel}`);
             
             try {
               // 現在のラベルを取得
@@ -53,7 +43,6 @@ jobs:
               // workflow:で始まるラベルを削除
               for (const label of currentLabels) {
                 if (label.name.startsWith('workflow:')) {
-                  console.log(`Removing label: ${label.name}`);
                   await github.rest.issues.removeLabel({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -64,7 +53,6 @@ jobs:
               }
               
               // 新しいラベルを追加
-              console.log(`Adding label: ${newLabel}`);
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -80,15 +68,17 @@ jobs:
                 body: `✅ ラベルを \`${newLabel}\` に更新しました。`
               });
               
-              console.log('Label update completed successfully');
             } catch (error) {
-              console.error('Error updating label:', error);
-              
-              // エラーコメント
+              console.error('Error:', error);
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `❌ ラベル更新中にエラーが発生しました: ${error.message}`
+                body: `❌ エラー: ${error.message}`
               });
             }
+EOF
+
+git add .github/workflows/claude-label-updater.yml
+git commit -m "Remove user restriction for label updates"
+git push
