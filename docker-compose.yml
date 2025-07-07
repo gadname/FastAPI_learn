@@ -35,6 +35,11 @@ services:
       - ai_bot_db_host=postgres_db
       - ai_bot_cloud_sql_connection_name=local
       - environment=development
+      # Supabase configuration (optional)
+      - supabase_url=${SUPABASE_URL:-}
+      - supabase_key=${SUPABASE_KEY:-}
+      - supabase_service_role_key=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - use_supabase=${USE_SUPABASE:-false}
 
   frontend:
     build:
@@ -49,6 +54,9 @@ services:
       - fastapi
     environment:
       - NEXT_PUBLIC_API_URL=http://fastapi:8000
+      # Supabase configuration (optional)
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_KEY:-}
     networks:
       - app_network
 

@@ -18,6 +18,16 @@ def _get_database_url() -> str:
 
     settings = Settings()
     
+    # Use Supabase PostgreSQL if enabled
+    if settings.use_supabase and settings.supabase_url:
+        # Extract database connection info from Supabase URL
+        # Supabase URL format: https://[project-id].supabase.co
+        # Database URL format: postgresql+asyncpg://[username]:[password]@[host]:5432/[database]
+        supabase_host = settings.supabase_url.replace("https://", "").replace("http://", "")
+        # For now, keep using the existing database settings but note Supabase availability
+        logger.info(f"Supabase enabled with URL: {settings.supabase_url}")
+        logger.info("Using hybrid mode: SQLAlchemy with potential Supabase integration")
+    
     # Use SQLite for development/testing if PostgreSQL is not available
     if settings.environment == "development" and settings.ai_bot_db_host == "localhost":
         return "sqlite+aiosqlite:///./test.db"
