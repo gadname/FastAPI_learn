@@ -1,0 +1,9 @@
+{
+  "enabledMcpjsonServers": [
+    "playwright",
+    "context7",
+    "gemini-cli",
+    "o3-search"
+  ],
+  "enableAllProjectMcpServers": true
+}
