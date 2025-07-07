@@ -1,4 +1,4 @@
-name: Label Updater
+name: Add Label GH
 
 on:
   issue_comment:
@@ -8,62 +8,18 @@ permissions:
   issues: write
 
 jobs:
-  update-label:
-    if: contains(github.event.comment.body, 'LABEL_UPDATE:')
+  add-label:
+    if: contains(github.event.comment.body, 'LABEL_UPDATE:workflow:ready-for-impl')
     runs-on: ubuntu-latest
     steps:
-      - name: Update Label
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const comment = context.payload.comment.body;
-            const match = comment.match(/LABEL_UPDATE:(\S+)/);
-            
-            if (!match) {
-              console.log('No label found');
-              return;
-            }
-            
-            const newLabel = match[1];
-            const issue = context.issue.number;
-            
-            console.log(`Updating issue #${issue} with label: ${newLabel}`);
-            
-            // Remove old labels
-            try {
-              await github.rest.issues.removeLabel({
-                ...context.repo,
-                issue_number: issue,
-                name: 'workflow:ready-for-analysis'
-              });
-            } catch (e) {}
-            
-            try {
-              await github.rest.issues.removeLabel({
-                ...context.repo,
-                issue_number: issue,
-                name: 'workflow:ready-for-impl'
-              });
-            } catch (e) {}
-            
-            try {
-              await github.rest.issues.removeLabel({
-                ...context.repo,
-                issue_number: issue,
-                name: 'workflow:ready-for-review'
-              });
-            } catch (e) {}
-            
-            // Add new label
-            await github.rest.issues.addLabels({
-              ...context.repo,
-              issue_number: issue,
-              labels: [newLabel]
-            });
-            
-            // Post comment
-            await github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: issue,
-              body: `✅ ラベルを \`${newLabel}\` に更新しました。`
-            });
+      - name: Add Label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ github.event.issue.number }} \
+            -R ${{ github.repository }} \
+            --add-label "workflow:ready-for-impl"
+          
+          gh issue comment ${{ github.event.issue.number }} \
+            -R ${{ github.repository }} \
+            --body "✅ ラベル \`workflow:ready-for-impl\` を追加しました。"
