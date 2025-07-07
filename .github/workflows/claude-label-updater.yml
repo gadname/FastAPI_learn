@@ -1,0 +1,94 @@
+# .github/workflows/claude-label-updater.yml
+# これを新規ファイルとして追加するか、既存のワークフローに追加
+
+name: Claude Label Updater
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  update-label-from-comment:
+    # claude[bot]のコメントでLABEL_UPDATE:が含まれているものを処理
+    if: |
+      github.event.issue.pull_request == null &&
+      contains(github.event.comment.body, 'LABEL_UPDATE:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check comment author and update label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment;
+            const commenter = comment.user.login;
+            
+            // claude[bot]またはGitHub Actionsからのコメントのみ処理
+            if (commenter !== 'claude[bot]' && commenter !== 'github-actions[bot]') {
+              console.log(`Skipping comment from ${commenter}`);
+              return;
+            }
+            
+            // LABEL_UPDATE:を探す
+            const match = comment.body.match(/LABEL_UPDATE:([^\s]+)/);
+            if (!match) {
+              console.log('No LABEL_UPDATE found');
+              return;
+            }
+            
+            const newLabel = match[1];
+            console.log(`Found label update request: ${newLabel}`);
+            
+            try {
+              // 現在のラベルを取得
+              const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+              
+              // workflow:で始まるラベルを削除
+              for (const label of currentLabels) {
+                if (label.name.startsWith('workflow:')) {
+                  console.log(`Removing label: ${label.name}`);
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    name: label.name
+                  });
+                }
+              }
+              
+              // 新しいラベルを追加
+              console.log(`Adding label: ${newLabel}`);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: [newLabel]
+              });
+              
+              // 確認コメント
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `✅ ラベルを \`${newLabel}\` に更新しました。`
+              });
+              
+              console.log('Label update completed successfully');
+            } catch (error) {
+              console.error('Error updating label:', error);
+              
+              // エラーコメント
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `❌ ラベル更新中にエラーが発生しました: ${error.message}`
+              });
+            }
