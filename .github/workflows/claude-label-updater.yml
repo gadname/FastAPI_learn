@@ -1,4 +1,4 @@
-name: Add Label GH
+name: Add Label
 
 on:
   issue_comment:
@@ -9,17 +9,44 @@ permissions:
 
 jobs:
   add-label:
-    if: contains(github.event.comment.body, 'LABEL_UPDATE:workflow:ready-for-impl')
+    if: contains(github.event.comment.body, 'LABEL_UPDATE:')
     runs-on: ubuntu-latest
     steps:
       - name: Add Label
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue edit ${{ github.event.issue.number }} \
-            -R ${{ github.repository }} \
-            --add-label "workflow:ready-for-impl"
-          
-          gh issue comment ${{ github.event.issue.number }} \
-            -R ${{ github.repository }} \
-            --body "✅ ラベル \`workflow:ready-for-impl\` を追加しました。"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            
+            // LABEL_UPDATE:の後の文字列を取得
+            const index = comment.indexOf('LABEL_UPDATE:');
+            if (index === -1) {
+              console.log('LABEL_UPDATE: not found');
+              return;
+            }
+            
+            // LABEL_UPDATE:の後の部分を取得して、最初の単語を抽出
+            const afterLabel = comment.substring(index + 13).trim();
+            const newLabel = afterLabel.split(/[\s\n]/)[0];
+            
+            if (!newLabel) {
+              console.log('No label specified');
+              return;
+            }
+            
+            const issue = context.issue.number;
+            console.log(`Adding label "${newLabel}" to issue #${issue}`);
+            
+            // ラベルを追加（既存のラベルはそのまま）
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: issue,
+              labels: [newLabel]
+            });
+            
+            // 確認コメント
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: issue,
+              body: `✅ ラベル \`${newLabel}\` を追加しました。`
+            });
