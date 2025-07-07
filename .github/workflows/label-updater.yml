@@ -1,0 +1,111 @@
+name: Label Updater Compatible
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  update-label:
+    # 以下の条件をすべて満たす場合のみ実行
+    if: |
+      github.event.comment.user.login == 'claude[bot]' &&
+      github.event.comment.user.type == 'Bot' &&
+      contains(github.event.comment.body, 'LABEL_UPDATE:') &&
+      !contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    
+    # Claude.ymlと同時実行を避ける
+    concurrency:
+      group: issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    
+    steps:
+      - name: Wait for other workflows
+        run: |
+          echo "Waiting 5 seconds to avoid conflicts..."
+          sleep 5
+          
+      - name: Check and Update Label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              // 再度コメントを取得（最新の状態を確認）
+              const { data: comment } = await github.rest.issues.getComment({
+                ...context.repo,
+                comment_id: context.payload.comment.id
+              });
+              
+              // コメント作成から10秒以内のみ処理（古いコメントは無視）
+              const commentAge = Date.now() - new Date(comment.created_at).getTime();
+              if (commentAge > 60000) {
+                console.log('Comment is too old, skipping');
+                return;
+              }
+              
+              // LABEL_UPDATE:を探す
+              const match = comment.body.match(/LABEL_UPDATE:([^\s\n]+)/);
+              if (!match) {
+                console.log('No LABEL_UPDATE found');
+                return;
+              }
+              
+              const newLabel = match[1];
+              const issueNumber = context.issue.number;
+              
+              console.log(`Processing label update: ${newLabel} for issue #${issueNumber}`);
+              
+              // 既存のworkflow:ラベルを取得
+              const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                ...context.repo,
+                issue_number: issueNumber
+              });
+              
+              // 同じラベルが既にある場合はスキップ
+              if (currentLabels.some(l => l.name === newLabel)) {
+                console.log('Label already exists, skipping');
+                return;
+              }
+              
+              // workflow:で始まるラベルを削除
+              const removedLabels = [];
+              for (const label of currentLabels) {
+                if (label.name.startsWith('workflow:') && label.name !== newLabel) {
+                  try {
+                    await github.rest.issues.removeLabel({
+                      ...context.repo,
+                      issue_number: issueNumber,
+                      name: label.name
+                    });
+                    removedLabels.push(label.name);
+                  } catch (e) {
+                    console.log(`Failed to remove label: ${label.name}`);
+                  }
+                }
+              }
+              
+              // 新しいラベルを追加
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: issueNumber,
+                labels: [newLabel]
+              });
+              
+              // 確認コメント（シンプルに）
+              const message = removedLabels.length > 0 
+                ? `✅ ラベルを \`${removedLabels.join(', ')}\` から \`${newLabel}\` に更新しました。`
+                : `✅ ラベル \`${newLabel}\` を追加しました。`;
+                
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issueNumber,
+                body: message + '\n\n_Automated by GitHub Actions_'
+              });
+              
+            } catch (error) {
+              console.error('Error:', error);
+              // エラーコメントは投稿しない（ノイズを減らすため）
+            }
