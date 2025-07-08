@@ -15,6 +15,7 @@ jobs:
         contains(github.event.comment.body, 'Estimated Timeline') ||
         contains(github.event.comment.body, 'Implementation Strategy') ||
         contains(github.event.comment.body, '分析完了')
+        contains(github.event.comment.body, '計画完了')
       )
     runs-on: ubuntu-latest
     permissions:
@@ -50,13 +51,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 実装リクエストをコメント
-          COMMENT_BODY="@claude PRを作成して実装してください。実装後、実装完了のコメントを投稿してください。
+          cat << 'EOF' > comment.txt
+          @claude PRを作成して実装してください。実装後、実装完了のコメントを投稿してください。
 
-実装が完了したら、以下のテキストを含むコメントを投稿してください：
-\`Implementation complete\` または \`実装完了\`"
+          実装が完了したら、以下のテキストを含むコメントを投稿してください：
+          `Implementation complete` または `実装完了`
+          EOF
           
           gh issue comment ${{ github.event.issue.number }} \
-            --body "$COMMENT_BODY"
+            --body-file comment.txt
           
           echo "✅ Implementation request posted!"
 
