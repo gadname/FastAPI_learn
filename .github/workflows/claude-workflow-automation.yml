@@ -1,22 +1,13 @@
-name: Claude Analysis Completion Handler
+name: Claude Marker-Based Handler
 
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  # Claudeの分析完了を検知して実装フェーズを開始
-  handle-claude-analysis:
-    if: |
-      github.event.comment.user.login == 'claude[bot]' &&
-      (
-        contains(github.event.comment.body, 'Comprehensive Execution Plan') ||
-        contains(github.event.comment.body, 'Analysis complete') ||
-        contains(github.event.comment.body, 'Estimated Timeline') ||
-        contains(github.event.comment.body, 'Implementation Strategy') ||
-        contains(github.event.comment.body, '分析完了')
-        contains(github.event.comment.body, '計画完了')
-      )
+  # マーカーベースの検知（最も確実）
+  handle-claude-with-markers:
+    if: github.event.comment.user.login == 'claude[bot]'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -24,77 +15,48 @@ jobs:
       pull-requests: write
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Log detection
+      - name: Check for markers
+        id: check_markers
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          echo "✅ Claude's analysis completion detected!"
-          echo "Issue: #${{ github.event.issue.number }}"
-          echo "Comment by: ${{ github.event.comment.user.login }}"
+          # 特定のマーカーを検索
+          if echo "$COMMENT_BODY" | grep -q "<!-- ANALYSIS_COMPLETE -->"; then
+            echo "action=trigger_implementation" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT_BODY" | grep -q "<!-- IMPLEMENTATION_COMPLETE -->"; then
+            echo "action=trigger_review" >> $GITHUB_OUTPUT
+          else
+            echo "action=none" >> $GITHUB_OUTPUT
+          fi
       
-      - name: Add workflow label
+      - name: Trigger implementation
+        if: steps.check_markers.outputs.action == 'trigger_implementation'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # GitHub CLIでラベルを追加（人間のユーザーとして）
-          gh issue edit ${{ github.event.issue.number }} \
-            --add-label "workflow:active" || echo "Label might already exist"
-      
-      - name: Wait before triggering implementation
-        run: |
-          echo "⏳ Waiting 10 seconds before triggering implementation..."
+          echo "✅ Analysis complete marker detected"
+          
+          # ラベル追加と実装リクエスト
+          gh issue edit ${{ github.event.issue.number }} --add-label "workflow:active"
+          
           sleep 10
-      
-      - name: Trigger implementation phase
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # 実装リクエストをコメント
+          
           cat << 'EOF' > comment.txt
-          @claude PRを作成して実装してください。実装後、実装完了のコメントを投稿してください。
-
-          実装が完了したら、以下のテキストを含むコメントを投稿してください：
-          `Implementation complete` または `実装完了`
+          @claude PRを作成して実装してください。
+          
+          実装が完了したら、コメントの最後に以下のマーカーを含めてください：
+          <!-- IMPLEMENTATION_COMPLETE -->
           EOF
           
-          gh issue comment ${{ github.event.issue.number }} \
-            --body-file comment.txt
+          gh issue comment ${{ github.event.issue.number }} --body-file comment.txt
+      
+      - name: Trigger review
+        if: steps.check_markers.outputs.action == 'trigger_review'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "✅ Implementation complete marker detected"
           
-          echo "✅ Implementation request posted!"
-
-  # Claudeの実装完了を検知
-  handle-implementation-complete:
-    if: |
-      github.event.comment.user.login == 'claude[bot]' &&
-      (
-        contains(github.event.comment.body, 'Implementation complete') ||
-        contains(github.event.comment.body, '実装完了') ||
-        contains(github.event.comment.body, 'PR created') ||
-        contains(github.event.comment.body, 'Pull request created')
-      )
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
-    
-    steps:
-      - name: Log implementation completion
-        run: |
-          echo "✅ Claude's implementation completion detected!"
-          echo "Issue: #${{ github.event.issue.number }}"
-      
-      - name: Add review label
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # レビュー用ラベルを追加
-          gh issue edit ${{ github.event.issue.number }} \
-            --add-label "workflow:ready-for-review" || echo "Label might already exist"
-      
-      - name: Post review notification
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label "workflow:ready-for-review"
           gh issue comment ${{ github.event.issue.number }} \
             --body "🎉 実装が完了しました！レビューの準備ができています。"
