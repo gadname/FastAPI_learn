@@ -1,0 +1,67 @@
+name: Claude Workflow Automation
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  trigger-claude-implementation:
+    # workflow:activeラベルが付けられた時のみ実行
+    if: github.event.label.name == 'workflow:active'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup GitHub CLI
+        uses: actions/setup-gh@v1
+      
+      - name: Comment on issue with implementation request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # issueに実装指示のコメントを投稿
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "@claude PRを作成して実装してください。実装後、ghコマンドで\"workflow:ready-for-review\"ラベルを付けてください。"
+      
+      - name: Log workflow trigger
+        run: |
+          echo "Triggered implementation request for issue #${{ github.event.issue.number }}"
+          echo "Issue title: ${{ github.event.issue.title }}"
+          echo "Triggered by label: ${{ github.event.label.name }}"
+
+  # ready-for-reviewラベルが付けられた時の処理
+  trigger-review-process:
+    if: github.event.label.name == 'workflow:ready-for-review'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup GitHub CLI
+        uses: actions/setup-gh@v1
+      
+      - name: Comment on issue with review request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # レビュープロセスの開始をコメント
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "@claude 実装が完了しました。レビューの準備ができています。"
+      
+      - name: Add reviewers to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # issueに関連付けられたPRを取得
+          PR_NUMBER=$(gh issue view ${{ github.event.issue.number }} --json linkedPullRequests --jq '.linkedPullRequests[0].number')
+          
+          if [ ! -z "$PR_NUMBER" ]; then
+            echo "Found linked PR: #$PR_NUMBER"
+            # 必要に応じてレビュアーを追加
+            # gh pr edit $PR_NUMBER --add-reviewer username1,username2
+          else
+            echo "No linked PR found for issue #${{ github.event.issue.number }}"
+          fi
