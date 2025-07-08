@@ -1,105 +1,125 @@
-name: Auto Label Debug - All Comments
+name: Auto Label After Claude Analysis
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  debug-all-comments:
-    # 条件なしで全てのコメントを処理
+  add-label-on-analysis-complete:
+    # Claude[bot]のコメントのみを処理
+    if: github.event.comment.user.login == 'claude[bot]'
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
     steps:
-      - name: Log Comment Details
+      - name: Debug Comment Info
         run: |
           echo "========================================"
-          echo "NEW COMMENT DETECTED"
+          echo "CLAUDE COMMENT DETECTED"
           echo "========================================"
           echo "Time: $(date)"
           echo "Repository: ${{ github.repository }}"
           echo "Issue #: ${{ github.event.issue.number }}"
           echo "Comment ID: ${{ github.event.comment.id }}"
-          echo "User Login: ${{ github.event.comment.user.login }}"
-          echo "User Type: ${{ github.event.comment.user.type }}"
-          echo "Is Claude?: ${{ github.event.comment.user.login == 'claude[bot]' }}"
+          echo "User: ${{ github.event.comment.user.login }}"
           echo "----------------------------------------"
-          echo "COMMENT BODY (first 500 chars):"
+          echo "Is 'working' message: ${{ contains(github.event.comment.body, 'Claude Code is working') }}"
+          echo "Has ANALYSIS_COMPLETE: ${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}"
+          echo "----------------------------------------"
+          echo "COMMENT PREVIEW (first 500 chars):"
           echo "${COMMENT_BODY:0:500}"
           echo "----------------------------------------"
-          echo "COMMENT BODY (last 200 chars):"
-          echo "${COMMENT_BODY: -200}"
-          echo "----------------------------------------"
-          echo "Contains 'Claude Code is working': ${{ contains(github.event.comment.body, 'Claude Code is working') }}"
-          echo "Contains '[ANALYSIS_COMPLETE]': ${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}"
+          echo "COMMENT END (last 300 chars):"
+          echo "${COMMENT_BODY: -300}"
           echo "========================================"
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
 
-      - name: Process Claude Comments
+      - name: Check Comment Type
+        id: check
+        run: |
+          # working messageではない場合のみ処理
+          if [[ "${{ contains(github.event.comment.body, 'Claude Code is working') }}" == "false" ]]; then
+            echo "✅ This is NOT a working message - will process"
+            echo "process=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️ This is a working message - skipping"
+            echo "process=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process Analysis Result
+        if: steps.check.outputs.process == 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            console.log('=== PROCESSING CLAUDE ANALYSIS RESULT ===');
             const comment = context.payload.comment;
-            const issuueNumber = context.issue.number;
             
-            console.log('=== JAVASCRIPT PROCESSING ===');
-            console.log('User:', comment.user.login);
-            console.log('Is Claude?:', comment.user.login === 'claude[bot]');
+            // デバッグ: コメントの詳細情報
+            console.log('Comment ID:', comment.id);
             console.log('Comment length:', comment.body.length);
+            console.log('Created at:', comment.created_at);
             
-            // コメント全体を確認
-            console.log('\n=== FULL COMMENT BODY ===');
-            console.log(comment.body);
-            console.log('=== END OF COMMENT ===\n');
-            
-            // マーカーの検索
-            const hasWorkingMessage = comment.body.includes('Claude Code is working');
+            // マーカーの確認
             const hasAnalysisComplete = comment.body.includes('[ANALYSIS_COMPLETE]');
+            console.log('Contains [ANALYSIS_COMPLETE]:', hasAnalysisComplete);
             
-            console.log('Has working message?:', hasWorkingMessage);
-            console.log('Has ANALYSIS_COMPLETE?:', hasAnalysisComplete);
-            
-            // Claudeのコメントで、作業中メッセージでない場合
-            if (comment.user.login === 'claude[bot]' && !hasWorkingMessage) {
-              console.log('This is a Claude result comment (not working message)');
+            if (hasAnalysisComplete) {
+              console.log('✅ ANALYSIS_COMPLETE marker found! Adding label...');
               
-              if (hasAnalysisComplete) {
-                console.log('ANALYSIS_COMPLETE found! Adding label...');
+              try {
+                // ラベルを追加
+                const result = await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: ['workflow:ready-for-impl']
+                });
                 
+                console.log('✅ Successfully added workflow:ready-for-impl label');
+                console.log('Current labels:', result.data.map(l => l.name).join(', '));
+                
+                // オプション: ready-for-analysisラベルを削除
                 try {
-                  const result = await github.rest.issues.addLabels({
+                  await github.rest.issues.removeLabel({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    issue_number: issuueNumber,
-                    labels: ['workflow:ready-for-impl']
+                    issue_number: context.issue.number,
+                    name: 'workflow:ready-for-analysis'
                   });
-                  
-                  console.log('Label added successfully!');
-                  console.log('Result:', result.data);
-                } catch (error) {
-                  console.error('Error adding label:', error.message);
-                  console.error('Full error:', error);
+                  console.log('✅ Removed workflow:ready-for-analysis label');
+                } catch (e) {
+                  console.log('ℹ️ workflow:ready-for-analysis label not found or already removed');
                 }
-              } else {
-                console.log('No ANALYSIS_COMPLETE marker found in this Claude comment');
+                
+              } catch (error) {
+                console.error('❌ Failed to add label:', error.message);
+                console.error('Error details:', JSON.stringify(error, null, 2));
+                throw error;
               }
             } else {
-              if (comment.user.login !== 'claude[bot]') {
-                console.log('Not a Claude comment, skipping');
-              } else {
-                console.log('This is the "working..." message, skipping');
-              }
+              console.log('⚠️ No [ANALYSIS_COMPLETE] marker found in this Claude comment');
+              console.log('Searching for marker in comment...');
+              
+              // マーカーの位置を探す（デバッグ用）
+              const lowerBody = comment.body.toLowerCase();
+              const searchTerms = ['analysis_complete', 'analysis complete', 'complete]'];
+              searchTerms.forEach(term => {
+                const index = lowerBody.indexOf(term);
+                if (index !== -1) {
+                  console.log(`Found "${term}" at position ${index}`);
+                  console.log('Context:', comment.body.substring(Math.max(0, index - 20), Math.min(comment.body.length, index + 50)));
+                }
+              });
             }
 
-      - name: Check Recent Comments (Backup)
-        if: github.event.comment.user.login == 'claude[bot]'
+      - name: List Recent Comments (Debug)
+        if: steps.check.outputs.process == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('\n=== CHECKING RECENT COMMENTS ===');
+            console.log('\n=== RECENT COMMENTS (for debugging) ===');
             
-            // 最新5件のコメントを取得
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -109,12 +129,12 @@ jobs:
               direction: 'desc'
             });
             
-            console.log(`Found ${comments.length} recent comments`);
-            
-            comments.forEach((c, index) => {
-              console.log(`\nComment ${index + 1}:`);
+            comments.forEach((c, i) => {
+              console.log(`\nComment ${i + 1}:`);
               console.log(`- User: ${c.user.login}`);
               console.log(`- Created: ${c.created_at}`);
-              console.log(`- First 100 chars: ${c.body.substring(0, 100)}...`);
-              console.log(`- Has ANALYSIS_COMPLETE?: ${c.body.includes('[ANALYSIS_COMPLETE]')}`);
+              console.log(`- Has ANALYSIS_COMPLETE: ${c.body.includes('[ANALYSIS_COMPLETE]')}`);
+              if (c.user.login === 'claude[bot]') {
+                console.log(`- Is working message: ${c.body.includes('Claude Code is working')}`);
+              }
             });
