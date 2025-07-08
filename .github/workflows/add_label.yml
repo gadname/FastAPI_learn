@@ -1,140 +1,87 @@
-name: Auto Label After Claude Analysis
+name: Auto Label on Analysis Complete (Simple with Logs)
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  add-label-on-analysis-complete:
-    # Claude[bot]のコメントのみを処理
-    if: github.event.comment.user.login == 'claude[bot]'
+  add-label:
+    # Claude[bot]のコメントで、ANALYSIS_COMPLETEが含まれる場合のみ
+    if: |
+      github.event.comment.user.login == 'claude[bot]' &&
+      contains(github.event.comment.body, '[ANALYSIS_COMPLETE]')
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
     steps:
-      - name: Debug Comment Info
+      - name: Log Comment Info
         run: |
           echo "========================================"
-          echo "CLAUDE COMMENT DETECTED"
+          echo "CLAUDE ANALYSIS COMPLETE DETECTED"
           echo "========================================"
           echo "Time: $(date)"
           echo "Repository: ${{ github.repository }}"
           echo "Issue #: ${{ github.event.issue.number }}"
           echo "Comment ID: ${{ github.event.comment.id }}"
           echo "User: ${{ github.event.comment.user.login }}"
+          echo "User Type: ${{ github.event.comment.user.type }}"
           echo "----------------------------------------"
-          echo "Is 'working' message: ${{ contains(github.event.comment.body, 'Claude Code is working') }}"
-          echo "Has ANALYSIS_COMPLETE: ${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}"
+          echo "COMMENT PREVIEW (first 200 chars):"
+          echo "${COMMENT_BODY:0:200}..."
           echo "----------------------------------------"
-          echo "COMMENT PREVIEW (first 500 chars):"
-          echo "${COMMENT_BODY:0:500}"
-          echo "----------------------------------------"
-          echo "COMMENT END (last 300 chars):"
-          echo "${COMMENT_BODY: -300}"
+          echo "COMMENT END (last 200 chars):"
+          echo "...${COMMENT_BODY: -200}"
           echo "========================================"
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
 
-      - name: Check Comment Type
-        id: check
-        run: |
-          # working messageではない場合のみ処理
-          if [[ "${{ contains(github.event.comment.body, 'Claude Code is working') }}" == "false" ]]; then
-            echo "✅ This is NOT a working message - will process"
-            echo "process=true" >> $GITHUB_OUTPUT
-          else
-            echo "⏭️ This is a working message - skipping"
-            echo "process=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Process Analysis Result
-        if: steps.check.outputs.process == 'true'
+      - name: Add Label
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('=== PROCESSING CLAUDE ANALYSIS RESULT ===');
-            const comment = context.payload.comment;
+            console.log('=== ADDING LABEL TO ISSUE ===');
+            console.log('Repository:', context.repo.owner + '/' + context.repo.repo);
+            console.log('Issue Number:', context.issue.number);
+            console.log('Label to add:', 'workflow:ready-for-impl');
             
-            // デバッグ: コメントの詳細情報
-            console.log('Comment ID:', comment.id);
-            console.log('Comment length:', comment.body.length);
-            console.log('Created at:', comment.created_at);
-            
-            // マーカーの確認
-            const hasAnalysisComplete = comment.body.includes('[ANALYSIS_COMPLETE]');
-            console.log('Contains [ANALYSIS_COMPLETE]:', hasAnalysisComplete);
-            
-            if (hasAnalysisComplete) {
-              console.log('✅ ANALYSIS_COMPLETE marker found! Adding label...');
-              
-              try {
-                // ラベルを追加
-                const result = await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  labels: ['workflow:ready-for-impl']
-                });
-                
-                console.log('✅ Successfully added workflow:ready-for-impl label');
-                console.log('Current labels:', result.data.map(l => l.name).join(', '));
-                
-                // オプション: ready-for-analysisラベルを削除
-                try {
-                  await github.rest.issues.removeLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: context.issue.number,
-                    name: 'workflow:ready-for-analysis'
-                  });
-                  console.log('✅ Removed workflow:ready-for-analysis label');
-                } catch (e) {
-                  console.log('ℹ️ workflow:ready-for-analysis label not found or already removed');
-                }
-                
-              } catch (error) {
-                console.error('❌ Failed to add label:', error.message);
-                console.error('Error details:', JSON.stringify(error, null, 2));
-                throw error;
-              }
-            } else {
-              console.log('⚠️ No [ANALYSIS_COMPLETE] marker found in this Claude comment');
-              console.log('Searching for marker in comment...');
-              
-              // マーカーの位置を探す（デバッグ用）
-              const lowerBody = comment.body.toLowerCase();
-              const searchTerms = ['analysis_complete', 'analysis complete', 'complete]'];
-              searchTerms.forEach(term => {
-                const index = lowerBody.indexOf(term);
-                if (index !== -1) {
-                  console.log(`Found "${term}" at position ${index}`);
-                  console.log('Context:', comment.body.substring(Math.max(0, index - 20), Math.min(comment.body.length, index + 50)));
-                }
+            try {
+              const result = await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['workflow:ready-for-impl']
               });
+              
+              console.log('✅ Label added successfully!');
+              console.log('Response status:', result.status);
+              console.log('Current labels on issue:', result.data.map(l => l.name).join(', '));
+              
+            } catch (error) {
+              console.error('❌ Failed to add label!');
+              console.error('Error message:', error.message);
+              console.error('Error status:', error.status);
+              console.error('Full error:', JSON.stringify(error, null, 2));
+              throw error;
             }
 
-      - name: List Recent Comments (Debug)
-        if: steps.check.outputs.process == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log('\n=== RECENT COMMENTS (for debugging) ===');
-            
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              per_page: 5,
-              sort: 'created',
-              direction: 'desc'
-            });
-            
-            comments.forEach((c, i) => {
-              console.log(`\nComment ${i + 1}:`);
-              console.log(`- User: ${c.user.login}`);
-              console.log(`- Created: ${c.created_at}`);
-              console.log(`- Has ANALYSIS_COMPLETE: ${c.body.includes('[ANALYSIS_COMPLETE]')}`);
-              if (c.user.login === 'claude[bot]') {
-                console.log(`- Is working message: ${c.body.includes('Claude Code is working')}`);
-              }
-            });
+  # デバッグ用: 全てのClaudeコメントをログ（条件を満たさない場合も）
+  debug-all-claude-comments:
+    if: github.event.comment.user.login == 'claude[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log All Claude Comments
+        run: |
+          echo "========================================"
+          echo "CLAUDE COMMENT (Debug)"
+          echo "========================================"
+          echo "Has ANALYSIS_COMPLETE: ${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}"
+          echo "Comment length: ${#COMMENT_BODY}"
+          echo "First 100 chars: ${COMMENT_BODY:0:100}"
+          if [[ "${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}" == "false" ]]; then
+            echo "❌ This Claude comment does NOT contain [ANALYSIS_COMPLETE]"
+          else
+            echo "✅ This Claude comment CONTAINS [ANALYSIS_COMPLETE]"
+          fi
+          echo "========================================"
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
