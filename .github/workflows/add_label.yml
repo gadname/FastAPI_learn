@@ -1,0 +1,17 @@
+name: Auto Label on Analysis Complete
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  check-and-label:
+    if: contains(github.event.comment.body, '[ANALYSIS_COMPLETE]')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Add workflow:ready-for-impl label
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: workflow:ready-for-impl
