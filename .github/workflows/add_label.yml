@@ -1,47 +1,68 @@
-name: Auto Label After Analysis
+name: Auto Label After Analysis Debug
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  add-label-after-analysis:
-    # ClaudeのコメントでANALYSIS_COMPLETEが含まれている場合のみ実行
-    if: |
-      github.event.comment.user.type == 'Bot' && 
-      contains(github.event.comment.body, '[ANALYSIS_COMPLETE]')
+  process-comment:
+    # 条件なしで常に実行
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
     steps:
-      - name: Add workflow:ready-for-impl label
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log('Analysis complete detected. Adding label...');
-            
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: ['workflow:ready-for-impl']
-            });
-            
-            console.log('Successfully added workflow:ready-for-impl label');
+      - name: Debug Comment Info
+        run: |
+          echo "=== Comment Debug Info ==="
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "User Login: ${{ github.event.comment.user.login }}"
+          echo "User Type: ${{ github.event.comment.user.type }}"
+          echo "User ID: ${{ github.event.comment.user.id }}"
+          echo "Is Bot (string compare): ${{ github.event.comment.user.type == 'Bot' }}"
+          echo "Comment Body Length: ${#COMMENT_BODY}"
+          echo "First 200 chars: ${COMMENT_BODY:0:200}"
+          echo "Contains [ANALYSIS_COMPLETE]: ${{ contains(github.event.comment.body, '[ANALYSIS_COMPLETE]') }}"
+          echo "Full User Object: ${{ toJSON(github.event.comment.user) }}"
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
 
-      # 既存のworkflow:ready-for-analysisラベルを削除（オプション）
-      - name: Remove workflow:ready-for-analysis label
+      - name: Check and Add Label
         uses: actions/github-script@v7
         with:
           script: |
-            try {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                name: 'workflow:ready-for-analysis'
-              });
-              console.log('Removed workflow:ready-for-analysis label');
-            } catch (error) {
-              console.log('Label not found or already removed');
+            const comment = context.payload.comment;
+            console.log('=== JavaScript Debug ===');
+            console.log('User type:', comment.user.type);
+            console.log('User login:', comment.user.login);
+            console.log('Is bot?:', comment.user.type === 'Bot');
+            console.log('Comment preview:', comment.body.substring(0, 200));
+            console.log('Contains marker?:', comment.body.includes('[ANALYSIS_COMPLETE]'));
+            
+            // より柔軟な条件チェック
+            const isClaude = comment.user.login.includes('claude') || 
+                            comment.user.type === 'Bot' ||
+                            comment.user.login.endsWith('[bot]');
+            
+            const hasMarker = comment.body.includes('[ANALYSIS_COMPLETE]');
+            
+            console.log('Is Claude?:', isClaude);
+            console.log('Has marker?:', hasMarker);
+            
+            if (isClaude && hasMarker) {
+              console.log('Adding label...');
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: ['workflow:ready-for-impl']
+                });
+                console.log('Label added successfully!');
+              } catch (error) {
+                console.error('Failed to add label:', error);
+              }
+            } else {
+              console.log('Conditions not met, skipping label addition');
+              console.log('Reason:', !isClaude ? 'Not Claude' : 'No marker found');
             }
