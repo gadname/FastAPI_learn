@@ -21,25 +21,40 @@ jobs:
           echo "issue_number=$ISSUE" >> $GITHUB_OUTPUT
           echo "branch_name=$BRANCH" >> $GITHUB_OUTPUT
       
-      - name: Get Issue Details
-        id: issue
+      - name: Setup Labels
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: ${{ steps.extract.outputs.issue_number }}
-            });
-            return issue.data;
+            const labels = ['workflow:ready-for-review'];
+            for (const label of labels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label,
+                    color: '0e8a16'
+                  });
+                }
+              }
+            }
       
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr create \
-            --title "Implementation: ${{ fromJson(steps.issue.outputs.result).title }}" \
-            --body "Closes #${{ steps.extract.outputs.issue_number }}\n\nImplemented by Claude bot\n\n${{ fromJson(steps.issue.outputs.result).body }}" \
-            --label "workflow:ready-for-review" \
+          # PRを作成（ラベルエラーは後で処理）
+          PR_URL=$(gh pr create \
+            --title "Implementation: Issue #${{ steps.extract.outputs.issue_number }}" \
+            --body "Closes #${{ steps.extract.outputs.issue_number }}\n\nImplemented by Claude bot" \
             --base main \
-            --head ${{ steps.extract.outputs.branch_name }}
+            --head ${{ steps.extract.outputs.branch_name }} \
+            --label "workflow:ready-for-review" 2>&1 | grep -o 'https://.*' || true)
+          
+          echo "PR created: $PR_URL"
