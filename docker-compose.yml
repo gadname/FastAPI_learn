@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   postgres_db:
     image: postgres:16
     container_name: practice_postgres_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -20,6 +19,7 @@ services:
       context: ./backend/fastapi
       dockerfile: Dockerfile
     container_name: fastapi_practice
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
@@ -29,18 +29,19 @@ services:
     networks:
       - app_network
     environment:
-      - ai_bot_db_user=postgres
-      - ai_bot_db_password=postgres
-      - ai_bot_db_name=ai_bot_db
-      - ai_bot_db_host=postgres_db
-      - ai_bot_cloud_sql_connection_name=local
-      - environment=development
+      ai_bot_db_user: postgres
+      ai_bot_db_password: postgres
+      ai_bot_db_name: ai_bot_db
+      ai_bot_db_host: postgres_db
+      ai_bot_cloud_sql_connection_name: local
+      environment: development
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: nextjs_frontend
+    restart: unless-stopped
     volumes:
       - ./frontend:/app
     ports:
@@ -48,7 +49,7 @@ services:
     depends_on:
       - fastapi
     environment:
-      - NEXT_PUBLIC_API_URL=http://fastapi:8000
+      NEXT_PUBLIC_API_URL: http://fastapi:8000
     networks:
       - app_network
 
