@@ -1,8 +1,4 @@
-from fastapi import APIRouter, Depends
-from fastapi import HTTPException
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.api.base.base_router import BaseCRUDRouter
 from app.schemas.bot import (
     BotCreate,
     BotResponse,
@@ -11,68 +7,20 @@ from app.schemas.bot import (
     UpdateBotRequest,
     DeleteBotResponse,
 )
-
-from app.db.database import get_db
 from app.services.chat_bot import ChatBotService
-from app.utils.logging import logger
 
+# Create router using base CRUD router
+crud_router = BaseCRUDRouter(
+    prefix="/bot",
+    tags=["bot"],
+    service=ChatBotService,
+    create_schema=BotCreate,
+    response_schema=BotResponse,
+    update_schema=UpdateBotRequest,
+    all_response_schema=BotAllResponse,
+    delete_response_schema=DeleteBotResponse,
+    resource_name="ボット"
+)
 
-router = APIRouter(prefix="/bot", tags=["bot"])
-
-
-@router.post("/", response_model=BotResponse)
-async def create_bot(bot: BotCreate, db: AsyncSession = Depends(get_db)) -> BotResponse:
-    try:
-        return await ChatBotService.create_chat_bot(db, bot)
-    except Exception as e:
-        logger.error(f"ボット作成エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/", response_model=BotAllResponse)
-async def get_all_bots(db: AsyncSession = Depends(get_db)) -> BotAllResponse:
-    try:
-        return await ChatBotService.get_all_bots(db)
-    except Exception as e:
-        logger.error(f"ボット取得エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{bot_id}", response_model=BotResponse)
-async def get_bot(bot_id: str, db: AsyncSession = Depends(get_db)) -> BotResponse:
-    try:
-        return await ChatBotService.get_bot_by_id(db, bot_id)
-    except ValueError as e:
-        logger.error(f"ボットが見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"ボット取得エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/{bot_id}", response_model=UpdateBotResponse)
-async def update_bot(
-    bot_id: str, request: UpdateBotRequest, db: AsyncSession = Depends(get_db)
-) -> UpdateBotResponse:
-    try:
-        return await ChatBotService.update_bot(bot_id, request, db)
-    except ValueError as e:
-        logger.error(f"ボットが見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"ボット更新エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{bot_id}", response_model=DeleteBotResponse)
-async def delete_bot(
-    bot_id: str, db: AsyncSession = Depends(get_db)
-) -> DeleteBotResponse:
-    try:
-        return await ChatBotService.delete_bot(bot_id, db)
-    except ValueError as e:
-        logger.error(f"ボットが見つかりません: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"ボット削除エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Export the router
+router = crud_router.router
