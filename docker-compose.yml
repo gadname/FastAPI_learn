@@ -4,6 +4,7 @@ services:
   postgres_db:
     image: postgres:16
     container_name: practice_postgres_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -20,6 +21,7 @@ services:
       context: ./backend/fastapi
       dockerfile: Dockerfile
     container_name: fastapi_practice
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
@@ -41,6 +43,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: nextjs_frontend
+    restart: unless-stopped
     volumes:
       - ./frontend:/app
     ports:
