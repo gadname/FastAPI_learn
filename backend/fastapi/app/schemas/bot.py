@@ -1,44 +1,65 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
 
 class BotBase(BaseModel):
-    name: str = ""
-    color: str = "C5E24A"
+    """
+    チャットボットの基本情報を定義するベースクラス。
+    """
+    name: str = Field(default="", description="ボットの名前", example="アシスタントボット")
+    color: str = Field(default="C5E24A", description="ボットの色コード（HEX形式）", example="FF5733")
 
 
 class BotCreate(BotBase):
+    """
+    新しいチャットボットを作成するためのデータスキーマ。
+    """
     pass
 
 
 class UpdateBotRequest(BaseModel):
-    name: Optional[str] = None
-    color: Optional[str] = None
+    """
+    チャットボットの情報を更新するためのデータスキーマ。
+    """
+    name: Optional[str] = Field(None, description="更新するボットの名前", example="新しいアシスタント")
+    color: Optional[str] = Field(None, description="更新するボットの色コード（HEX形式）", example="33FF57")
 
 
 class BotResponse(BotBase):
-    id: str
-    created_at: datetime
-    updated_at: datetime
+    """
+    チャットボットの情報を返すためのデータスキーマ。
+    """
+    id: str = Field(..., description="ボットの一意識別子", example="bot_12345abcde")
+    created_at: datetime = Field(..., description="作成日時")
+    updated_at: datetime = Field(..., description="最終更新日時")
 
     class Config:
         from_attributes = True
 
 
 class BotAllResponse(BaseModel):
-    bots: list[BotResponse]
+    """
+    全てのチャットボットの情報を返すためのデータスキーマ。
+    """
+    bots: list[BotResponse] = Field(..., description="チャットボットのリスト")
 
 
 class UpdateBotResponse(BaseModel):
-    id: str
-    name: str
-    color: str
-    updated_at: datetime
+    """
+    チャットボットの更新結果を返すためのデータスキーマ。
+    """
+    id: str = Field(..., description="ボットの一意識別子", example="bot_12345abcde")
+    name: str = Field(..., description="ボットの名前", example="アシスタントボット")
+    color: str = Field(..., description="ボットの色コード（HEX形式）", example="C5E24A")
+    updated_at: datetime = Field(..., description="最終更新日時")
 
     class Config:
         from_attributes = True
 
 
 class DeleteBotResponse(BaseModel):
-    id: str
+    """
+    チャットボットの削除結果を返すためのデータスキーマ。
+    """
+    id: str = Field(..., description="削除されたボットの一意識別子", example="bot_12345abcde")

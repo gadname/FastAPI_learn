@@ -1,5 +1,8 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class CatImageResponse(BaseModel):
-    url: HttpUrl
+    """
+    猫の画像情報を返すためのデータスキーマ。
+    """
+    url: HttpUrl = Field(..., description="猫の画像URL", example="https://example.com/cat-image.jpg")
