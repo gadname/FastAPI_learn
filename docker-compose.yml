@@ -1,56 +1,63 @@
-version: '3.8'
-
 services:
-  postgres_db:
+  db:
     image: postgres:16
-    container_name: practice_postgres_db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_bot_db
-    ports:
-      - "5432:5432"
+    container_name: db
+    env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  fastapi:
+  api:
     build:
       context: ./backend/fastapi
       dockerfile: Dockerfile
-    container_name: fastapi_practice
+    container_name: api
     ports:
       - "8000:8000"
     volumes:
       - ./backend/fastapi:/app
+    env_file: .env
     depends_on:
-      - postgres_db
+      db:
+        condition: service_healthy
     networks:
       - app_network
-    environment:
-      - ai_bot_db_user=postgres
-      - ai_bot_db_password=postgres
-      - ai_bot_db_name=ai_bot_db
-      - ai_bot_db_host=postgres_db
-      - ai_bot_cloud_sql_connection_name=local
-      - environment=development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  frontend:
+  web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: nextjs_frontend
+    container_name: web
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
+    env_file: .env
     depends_on:
-      - fastapi
-    environment:
-      - NEXT_PUBLIC_API_URL=http://fastapi:8000
+      api:
+        condition: service_healthy
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
@@ -58,4 +65,4 @@ volumes:
 
 networks:
   app_network:
-    driver: bridge 
+    driver: bridge
