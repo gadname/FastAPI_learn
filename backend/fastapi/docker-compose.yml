@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # FastAPI Application
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    environment:
+      - FASTAPI_HOST=0.0.0.0
+      - FASTAPI_PORT=8000
+      - FASTAPI_RELOAD=false
+      - FASTAPI_LOG_LEVEL=info
+      - DATABASE_URL=postgresql+asyncpg://fastapi_user:fastapi_password@db:5432/fastapi_db
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: fastapi_db
+    environment:
+      - POSTGRES_USER=fastapi_user
+      - POSTGRES_PASSWORD=fastapi_password
+      - POSTGRES_DB=fastapi_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastapi_user -d fastapi_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  fastapi_network:
+    driver: bridge
