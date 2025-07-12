@@ -1,0 +1,80 @@
+# Multi-stage build for FastAPI application optimization
+
+# Build stage
+FROM python:3.12-slim as builder
+
+# Set environment variables for build stage
+ENV PYTHONUNBUFFERED=1
+ENV POETRY_NO_INTERACTION=1
+ENV POETRY_VENV_IN_PROJECT=1
+ENV POETRY_CACHE_DIR=/opt/poetry_cache
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install poetry==1.8.3
+
+# Set work directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock* ./
+
+# Install dependencies only (no dev dependencies for production)
+RUN poetry install --only=main --no-interaction --no-root && rm -rf $POETRY_CACHE_DIR
+
+# Production stage
+FROM python:3.12-slim as production
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Runtime environment variables (can be overridden)
+ENV FASTAPI_HOST=0.0.0.0
+ENV FASTAPI_PORT=8000
+ENV FASTAPI_RELOAD=false
+ENV FASTAPI_LOG_LEVEL=info
+ENV DATABASE_URL=""
+ENV CORS_ORIGINS="http://localhost:3000"
+
+# Create non-root user for security
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder stage
+COPY --from=builder /app/.venv /opt/venv
+
+# Set work directory
+WORKDIR /app
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:${FASTAPI_PORT}/health', timeout=10)"
+
+# Expose only the necessary port
+EXPOSE ${FASTAPI_PORT}
+
+# Run the application
+CMD uvicorn app.main:app \
+    --host ${FASTAPI_HOST} \
+    --port ${FASTAPI_PORT} \
+    --reload ${FASTAPI_RELOAD} \
+    --log-level ${FASTAPI_LOG_LEVEL}

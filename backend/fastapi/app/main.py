@@ -23,6 +23,12 @@ async def root():
     return FileResponse("static/index.html")
 
 
+# Health check endpoint for Docker
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "message": "FastAPI service is running"}
+
+
 allowed_origins: list[str] = [
     "http://localhost:3000",
 ]
