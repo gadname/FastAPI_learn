@@ -14,6 +14,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   fastapi:
     build:
@@ -25,7 +36,8 @@ services:
     volumes:
       - ./backend/fastapi:/app
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     networks:
       - app_network
     environment:
@@ -35,6 +47,17 @@ services:
       - ai_bot_db_host=postgres_db
       - ai_bot_cloud_sql_connection_name=local
       - environment=development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
 
   frontend:
     build:
@@ -46,11 +69,23 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - fastapi
+      fastapi:
+        condition: service_healthy
     environment:
       - NEXT_PUBLIC_API_URL=http://fastapi:8000
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
 volumes:
   postgres_data:
