@@ -1,19 +1,27 @@
-version: '3.8'
-
 services:
   postgres_db:
     image: postgres:16
     container_name: practice_postgres_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_bot_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   fastapi:
     build:
@@ -25,16 +33,29 @@ services:
     volumes:
       - ./backend/fastapi:/app
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     networks:
       - app_network
     environment:
-      - ai_bot_db_user=postgres
-      - ai_bot_db_password=postgres
-      - ai_bot_db_name=ai_bot_db
-      - ai_bot_db_host=postgres_db
-      - ai_bot_cloud_sql_connection_name=local
-      - environment=development
+      - AI_BOT_DB_USER=${AI_BOT_DB_USER}
+      - AI_BOT_DB_PASSWORD=${AI_BOT_DB_PASSWORD}
+      - AI_BOT_DB_NAME=${AI_BOT_DB_NAME}
+      - AI_BOT_DB_HOST=${AI_BOT_DB_HOST}
+      - AI_BOT_CLOUD_SQL_CONNECTION_NAME=${AI_BOT_CLOUD_SQL_CONNECTION_NAME}
+      - ENVIRONMENT=${ENVIRONMENT}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/docs || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
 
   frontend:
     build:
@@ -46,11 +67,24 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - fastapi
+      fastapi:
+        condition: service_healthy
     environment:
-      - NEXT_PUBLIC_API_URL=http://fastapi:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     networks:
       - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
 
 volumes:
   postgres_data:
