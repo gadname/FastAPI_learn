@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    ports:
+      - "${FASTAPI_PORT:-8000}:${FASTAPI_PORT:-8000}"
+    environment:
+      - FASTAPI_HOST=${FASTAPI_HOST:-0.0.0.0}
+      - FASTAPI_PORT=${FASTAPI_PORT:-8000}
+      - FASTAPI_RELOAD=${FASTAPI_RELOAD:-false}
+      - FASTAPI_LOG_LEVEL=${FASTAPI_LOG_LEVEL:-info}
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    env_file:
+      - .env
+    volumes:
+      # Only mount source code in development mode
+      - type: bind
+        source: .
+        target: /app
+        read_only: true
+    depends_on:
+      - db
+    networks:
+      - fastapi-network
+    restart: unless-stopped
+    # Security: limit resources
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-fastapi_db}
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Don't expose DB port in production
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - fastapi-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  fastapi-network:
+    driver: bridge

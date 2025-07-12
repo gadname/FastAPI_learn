@@ -17,6 +17,12 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 
 
+# ヘルスチェックエンドポイント
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "fastapi"}
+
+
 # ルートパスのエンドポイントを追加 - Kanbanボードを表示
 @app.get("/")
 async def root():
